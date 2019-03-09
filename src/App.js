@@ -54,6 +54,7 @@ const log = console.log // eslint-disable-line no-unused-vars
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
     width: 100%;
+    padding: 10px;
   `
 
 , handleCSVDownload = (columns, data) => {
@@ -152,8 +153,7 @@ class App extends Component {
 
     return (
       <div>
-        <label htmlFor="unit">Unit</label>
-        <input name="unit" style={{width: '100%', padding: '20px'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
+        <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
         {
           Object.keys(state.codes).map((k, i) =>
             <CodeButton
@@ -167,7 +167,8 @@ class App extends Component {
         }
         <button style={{
           width: '100%',
-          padding: '10px',
+          padding: '15px',
+          backgroundColor: '#74fff8'
         }} onClick={evt => addCodes(this)}>Add Codes</button>
         <ul id="report" style={{
           listStyleType: 'none'
