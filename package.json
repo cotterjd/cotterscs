@@ -4,6 +4,7 @@
   "private": true,
   "homepage": "http://cotterjd.github.io/cotterscs",
   "dependencies": {
+    "ramda": "^0.26.1",
     "react": "^16.8.4",
     "react-dom": "^16.8.4",
     "react-scripts": "2.1.5",

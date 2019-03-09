@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import styled from 'styled-components';
 import './App.css';
+import * as R from 'ramda'
 
 const log = console.log // eslint-disable-line no-unused-vars
 , addCode = (comp, code) => {
@@ -10,18 +11,44 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 , addUnitName = (comp, evt) => comp.setState({unitName: evt.target.value})
 , addCodes = comp => {
-    comp.setState((oldState) => ({
-      unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
-      chosenCodes: [],
-      unitName: '',
-    }))
+    if (!!comp.state.unitName && !!comp.state.chosenCodes.length) {
+      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `
+            mutation {
+              createUnitCode(data: {
+                deviceId: "1"
+                unit: "${comp.state.unitName}"
+                codes: "${comp.state.chosenCodes.join(', ')}"
+              }) {
+                id
+              }
+            }
+          `
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(r => r.json())
+      .then(() => {
+         comp.setState((oldState) => ({
+           unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
+           chosenCodes: [],
+           unitName: '',
+         }))
+         }
+      )
+      .catch(console.error)
+    }
+
   }
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'}
   `
 
 , handleCSVDownload = (columns, data) => {
-    log(data)
     const CSVHead = `${columns.reduce((soFar, column) => `${soFar}"${column}",`, '').slice(0, -1)}\r\n`
     const CSVBody = data.reduce((soFar, row) => `${soFar}"${row.join('","')}"\r\n`, []).trim()
 
@@ -40,9 +67,31 @@ const log = console.log // eslint-disable-line no-unused-vars
     link.click()
     document.body.removeChild(link)
   }
-
-, getData = ({ state }) => {
-
+, formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt ]).reverse()
+, getUnitCodesAndDownload = () => {
+    return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+      method: 'POST',
+      body: JSON.stringify({
+        query: `
+          query {
+            unitCodes {
+              unit
+              codes
+              createdAt
+            }
+          }
+        `
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    .then(r => r.json())
+    .then(r => {
+      const data = formatData(r.data.unitCodes)
+      handleCSVDownload(['unit', 'codes', 'created date'], data)
+    })
+    .catch(console.error)
   }
 ;
 class App extends Component {
@@ -99,7 +148,7 @@ class App extends Component {
         <button style={{
           width: '100%',
           padding: '10px',
-        }} onClick={evt => handleCSVDownload(['unit', 'codes'], state.unitCodes)}>Download Report</button>
+        }} onClick={evt => getUnitCodesAndDownload()}>Download Report</button>
         <ul id="report" style={{
           listStyleType: 'none'
         }}>
