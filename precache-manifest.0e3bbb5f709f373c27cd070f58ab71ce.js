@@ -4,19 +4,19 @@ self.__precacheManifest = [
     "url": "/cotterscs/static/js/runtime~main.22d88fc3.js"
   },
   {
-    "revision": "1e9adbe8d9d54c7290da",
-    "url": "/cotterscs/static/js/main.1e9adbe8.chunk.js"
+    "revision": "b5976324d33adc4b0e0a",
+    "url": "/cotterscs/static/js/main.b5976324.chunk.js"
   },
   {
     "revision": "62771aba6c77ed03d8e9",
     "url": "/cotterscs/static/js/2.62771aba.chunk.js"
   },
   {
-    "revision": "1e9adbe8d9d54c7290da",
+    "revision": "b5976324d33adc4b0e0a",
     "url": "/cotterscs/static/css/main.1a4fa007.chunk.css"
   },
   {
-    "revision": "d92521729c554a1820fb6c5e6e7f47fc",
+    "revision": "0957cec1c289b72c8019c39397b3918f",
     "url": "/cotterscs/index.html"
   }
 ];
