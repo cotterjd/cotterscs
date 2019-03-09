@@ -2,8 +2,15 @@ import React, { Component } from 'react';
 import styled from 'styled-components';
 import './App.css';
 import * as R from 'ramda'
+import { makeCookieString, getCookie } from './cookie'
+import Modal from './Modal'
 
 const log = console.log // eslint-disable-line no-unused-vars
+, chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
+, getRandomIndex = (xs) => Math.floor(Math.random() * ((xs.length - 1) + 1))
+, getId = chars => Array(6).fill(null).map((_) => chars[getRandomIndex(chars)]).join('')
+, getDeviceId = () => getId(chars)
+
 , addCode = (comp, code) => {
     comp.setState((oldState, props) => ({
       chosenCodes: oldState.chosenCodes.includes(code) ? oldState.chosenCodes.filter(x => x !== code) : oldState.chosenCodes.concat(code)
@@ -18,7 +25,7 @@ const log = console.log // eslint-disable-line no-unused-vars
           query: `
             mutation {
               createUnitCode(data: {
-                deviceId: "1"
+                deviceId: "${comp.state.deviceId}"
                 unit: "${comp.state.unitName}"
                 codes: "${comp.state.chosenCodes.join(', ')}"
               }) {
@@ -45,7 +52,8 @@ const log = console.log // eslint-disable-line no-unused-vars
 
   }
 , CodeButton = styled.button`
-    background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'}
+    background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
+    width: 100%;
   `
 
 , handleCSVDownload = (columns, data) => {
@@ -67,8 +75,8 @@ const log = console.log // eslint-disable-line no-unused-vars
     link.click()
     document.body.removeChild(link)
   }
-, formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt ]).reverse()
-, getUnitCodesAndDownload = () => {
+, formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt, x.deviceId ]).reverse()
+, getUnitCodesAndDownload = (comp) => {
     return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
       method: 'POST',
       body: JSON.stringify({
@@ -78,6 +86,7 @@ const log = console.log // eslint-disable-line no-unused-vars
               unit
               codes
               createdAt
+              deviceId
             }
           }
         `
@@ -88,40 +97,55 @@ const log = console.log // eslint-disable-line no-unused-vars
     })
     .then(r => r.json())
     .then(r => {
-      const data = formatData(r.data.unitCodes)
-      handleCSVDownload(['unit', 'codes', 'created date'], data)
+      comp.setState({allUnitCodes: r.data.unitCodes, showModal: true})
     })
     .catch(console.error)
   }
+, downloadUnitCodesFromDevice = (comp, deviceId) => {
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId)
+    const data = formatData(deviceUnitCodes)
+    handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
+    comp.setState({showModal: false})
+  }
 ;
 class App extends Component {
-  state = {
-    codes: {
-      mmc: 'Missing Chimney Cap'
-    , md: 'Missing Damper'
-    , bd: 'Broken Damper'
-    , mss: 'Missing Spark Screen'
-    , dss: 'amaged Spark Screen'
-    , lrp: 'damaged Left Refractory Panel'
-    , brp: 'damaged Back Refractory Panel'
-    , rrp: 'damaged Right Refractory Panel'
-    , bp: 'damaged Base Panel'
-    , mlrp: 'Missing Left Refractory Panel'
-    , mbrp: 'Missing Back Refractory Panel'
-    , mrrp: 'Missing Right Refractory Panel'
-    , mbp: 'Missing Base Panel'
-    , tv: 'TV'
-    , dog: 'DOG'
-    , b: 'Blocked'
-    , l: 'Locked from the inside'
-    , nk: 'No Key'
-    , knw: 'Key Not Work'
-    , s: 'Skip per mgmt'
-    , min: 'Minor'
-    },
-    chosenCodes: [],
-    unitName: '',
-    unitCodes: [],
+  constructor() {
+    super()
+    const deviceId = getCookie('deviceId')
+    if (!deviceId) {
+      document.cookie=makeCookieString('deviceId', getDeviceId())
+    }
+    this.state = {
+      codes: {
+        mmc: 'Missing Chimney Cap'
+      , md: 'Missing Damper'
+      , bd: 'Broken Damper'
+      , mss: 'Missing Spark Screen'
+      , dss: 'amaged Spark Screen'
+      , lrp: 'damaged Left Refractory Panel'
+      , brp: 'damaged Back Refractory Panel'
+      , rrp: 'damaged Right Refractory Panel'
+      , bp: 'damaged Base Panel'
+      , mlrp: 'Missing Left Refractory Panel'
+      , mbrp: 'Missing Back Refractory Panel'
+      , mrrp: 'Missing Right Refractory Panel'
+      , mbp: 'Missing Base Panel'
+      , tv: 'TV'
+      , dog: 'DOG'
+      , b: 'Blocked'
+      , l: 'Locked from the inside'
+      , nk: 'No Key'
+      , knw: 'Key Not Work'
+      , s: 'Skip per mgmt'
+      , min: 'Minor'
+      },
+      chosenCodes: [],
+      unitName: '',
+      unitCodes: [],
+      allUnitCodes: [],
+      deviceId: deviceId,
+      showModal: false,
+    }
   }
   render() {
     const { state } = this
@@ -129,7 +153,7 @@ class App extends Component {
     return (
       <div>
         <label htmlFor="unit">Unit</label>
-        <input name="unit" value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
+        <input name="unit" style={{width: '100%', padding: '20px'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
         {
           Object.keys(state.codes).map((k, i) =>
             <CodeButton
@@ -145,10 +169,6 @@ class App extends Component {
           width: '100%',
           padding: '10px',
         }} onClick={evt => addCodes(this)}>Add Codes</button>
-        <button style={{
-          width: '100%',
-          padding: '10px',
-        }} onClick={evt => getUnitCodesAndDownload()}>Download Report</button>
         <ul id="report" style={{
           listStyleType: 'none'
         }}>
@@ -156,7 +176,19 @@ class App extends Component {
           state.unitCodes.map((x, i) => <li key={i}>{x}</li>)
         }
         </ul>
-
+        <button style={{
+          padding: '10px',
+        }} onClick={evt => getUnitCodesAndDownload(this)}>Download Report</button>
+        <Modal
+          open={state.showModal}
+          close={evt => this.setState({showModal: false})}
+        >
+          <h4>Which device to you want to download codes from</h4>
+          {
+            Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
+              .map(x => <button key={x} onClick={evt => downloadUnitCodesFromDevice(this, x)}>{`Device ${x}`}</button>)
+          }
+        </Modal>
       </div>
     );
   }
