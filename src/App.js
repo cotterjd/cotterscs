@@ -53,6 +53,7 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
+    color: ${props => props.state.chosenCodes.includes(props.code) ? 'white' : 'none'};
     width: 100%;
     padding: 10px;
   `
