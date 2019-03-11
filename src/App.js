@@ -145,7 +145,7 @@ class App extends Component {
       unitName: '',
       unitCodes: [],
       allUnitCodes: [],
-      deviceId: deviceId,
+      deviceId: getCookie('deviceId'),
       showModal: false,
     }
   }
