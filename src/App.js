@@ -114,7 +114,7 @@ class App extends Component {
     super()
     const deviceId = getCookie('deviceId')
     if (!deviceId) {
-      document.cookie=makeCookieString('deviceId', getDeviceId())
+      document.cookie=makeCookieString('deviceId', getDeviceId(), 3650)
     }
     this.state = {
       codes: {
