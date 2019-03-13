@@ -57,11 +57,13 @@ const log = console.log // eslint-disable-line no-unused-vars
     width: 100%;
     padding: 10px;
   `
-
+// [String] -> [Array] -> null
 , handleCSVDownload = (columns, data) => {
     const CSVHead = `${columns.reduce((soFar, column) => `${soFar}"${column}",`, '').slice(0, -1)}\r\n`
-    const CSVBody = data.reduce((soFar, row) => `${soFar}"${row.join('","')}"\r\n`, []).trim()
-
+    let CSVBody = data.reduce((soFar, row) => `${soFar}"${row.join('","')}"\r\n`, [])
+    if (typeof CSVBody === "string") {
+      CSVBody = CSVBody.trim()
+    } else CSVBody = ''
     /* taken from react-csv */
     const csv = `${CSVHead}${CSVBody}`
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -104,7 +106,13 @@ const log = console.log // eslint-disable-line no-unused-vars
     .catch(console.error)
   }
 , downloadUnitCodesFromDevice = (comp, deviceId) => {
-    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId)
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && x.codes !== 'No Key')
+    const data = formatData(deviceUnitCodes)
+    handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
+    comp.setState({showModal: false})
+  }
+, downloadNAUnitCodesFromDevice = (comp, deviceId) => {
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && x.codes === 'No Key')
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
     comp.setState({showModal: false})
@@ -119,27 +127,27 @@ class App extends Component {
     }
     this.state = {
       codes: {
-        mmc: 'Missing Chimney Cap'
-      , md: 'Missing Damper'
-      , bd: 'Broken Damper'
-      , mss: 'Missing Spark Screen'
-      , dss: 'amaged Spark Screen'
-      , lrp: 'damaged Left Refractory Panel'
-      , brp: 'damaged Back Refractory Panel'
-      , rrp: 'damaged Right Refractory Panel'
-      , bp: 'damaged Base Panel'
-      , mlrp: 'Missing Left Refractory Panel'
-      , mbrp: 'Missing Back Refractory Panel'
-      , mrrp: 'Missing Right Refractory Panel'
-      , mbp: 'Missing Base Panel'
-      , tv: 'TV'
-      , dog: 'DOG'
-      , b: 'Blocked'
-      , l: 'Locked from the inside'
-      , nk: 'No Key'
-      , knw: 'Key Not Work'
-      , s: 'Skip per mgmt'
-      , min: 'Minor'
+        'Missing Chimney Cap': 'Missing Chimney Cap'
+      , 'Missing Damper': 'Missing Damper'
+      , 'Broken Damper': 'Broken Damper'
+      , 'Missing Spark Screen': 'Missing Spark Screen'
+      , 'Damaged Spark Screen': 'Damaged Spark Screen'
+      , 'Damaged Left Refractory Panel': 'Damaged Left Refractory Panel'
+      , 'Damaged Back Refractory Panel': 'Damaged Back Refractory Panel'
+      , 'Damaged Right Refractory Panel': 'Damaged Right Refractory Panel'
+      , 'Damaged Base Panel': 'Damaged Base Panel'
+      , 'Missing Left Refractory Panel': 'Missing Left Refractory Panel'
+      , 'Missing Back Refractory Panel': 'Missing Back Refractory Panel'
+      , 'Missing Right Refractory Panel': 'Missing Right Refractory Panel'
+      , 'Missing Base Panel': 'Missing Base Panel'
+      , 'TV': 'TV'
+      , 'Dog': 'Dog'
+      , 'Blocked': 'Blocked'
+      , 'Locked From The Inside': 'Locked from the inside'
+      , 'No Key': 'No Key'
+      , 'Key Not Work': 'Key Not Work'
+      , 'Skip Per Management': 'Skip Per Management'
+      , 'Minor': 'Minor'
       },
       chosenCodes: [],
       unitName: '',
@@ -188,7 +196,12 @@ class App extends Component {
           <h4>Which device to you want to download codes from</h4>
           {
             Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
-              .map(x => <button key={x} onClick={evt => downloadUnitCodesFromDevice(this, x)}>{`Device ${x}`}</button>)
+              .map(x =>
+                (<div>
+                  <button key={x} onClick={evt => downloadUnitCodesFromDevice(this, x)}>{`Device ${x}`}</button>
+                  <button key={x} onClick={evt => downloadNAUnitCodesFromDevice(this, x)}>{`Device ${x} (NA)`}</button>
+                </div>)
+              )
           }
         </Modal>
       </div>
