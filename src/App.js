@@ -105,14 +105,14 @@ const log = console.log // eslint-disable-line no-unused-vars
     })
     .catch(console.error)
   }
-, downloadUnitCodesFromDevice = (comp, deviceId) => {
-    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && x.codes !== 'No Key')
+, downloadServicedUnitCodesFromDevice = (comp, deviceId) => {
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && comp.state.servicedCodes.includes(x.codes.split(', ')[0]))
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
     comp.setState({showModal: false})
   }
-, downloadNAUnitCodesFromDevice = (comp, deviceId) => {
-    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && x.codes === 'No Key')
+, downloadUnservicedUnitCodesFromDevice = (comp, deviceId) => {
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && comp.state.unServicedCodes.includes(x.codes.split(', ')[0]))
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
     comp.setState({showModal: false})
@@ -126,6 +126,33 @@ class App extends Component {
       document.cookie=makeCookieString('deviceId', getDeviceId(), 3650)
     }
     this.state = {
+      unServicedCodes: [
+        'TV'
+      , 'Dog'
+      , 'Blocked'
+      , 'Locked From The Inside'
+      , 'No Key'
+      , 'Key Not Work'
+      , 'Skip Per Management'
+      , 'Minor'
+      , 'OTHER'
+      , 'Went Back'
+      ],
+      servicedCodes: [
+        'Missing Chimney Cap'
+      , 'Missing Damper'
+      , 'Broken Damper'
+      , 'Missing Spark Screen'
+      , 'Damaged Spark Screen'
+      , 'Damaged Left Refractory Panel'
+      , 'Damaged Back Refractory Panel'
+      , 'Damaged Right Refractory Panel'
+      , 'Damaged Base Panel'
+      , 'Missing Left Refractory Panel'
+      , 'Missing Back Refractory Panel'
+      , 'Missing Right Refractory Panel'
+      , 'Missing Base Panel'
+      ],
       codes: {
         'Missing Chimney Cap': 'Missing Chimney Cap'
       , 'Missing Damper': 'Missing Damper'
@@ -200,8 +227,8 @@ class App extends Component {
             Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
               .map(x =>
                 (<div>
-                  <button key={x} onClick={evt => downloadUnitCodesFromDevice(this, x)}>{`Device ${x}`}</button>
-                  <button key={x} onClick={evt => downloadNAUnitCodesFromDevice(this, x)}>{`Device ${x} (NA)`}</button>
+                  <button key={x} onClick={evt => downloadServicedUnitCodesFromDevice(this, x)}>{`Device ${x}`}</button>
+                  <button key={x} onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`Device ${x} (NA)`}</button>
                 </div>)
               )
           }
