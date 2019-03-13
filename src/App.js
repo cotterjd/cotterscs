@@ -216,7 +216,8 @@ class App extends Component {
         }
         </ul>
         <button style={{
-          padding: '10px',
+          padding: '20px',
+          marginBottom: '50px'
         }} onClick={evt => getUnitCodesAndDownload(this)}>Download Report</button>
         <Modal
           open={state.showModal}
