@@ -136,7 +136,6 @@ class App extends Component {
       , 'Skip Per Management'
       , 'Minor'
       , 'OTHER'
-      , 'Went Back'
       ],
       servicedCodes: [
         'Missing Chimney Cap'
@@ -152,6 +151,7 @@ class App extends Component {
       , 'Missing Back Refractory Panel'
       , 'Missing Right Refractory Panel'
       , 'Missing Base Panel'
+      , 'Went Back'
       ],
       codes: {
         'Missing Chimney Cap': 'Missing Chimney Cap'
