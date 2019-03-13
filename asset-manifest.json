@@ -1,13 +1,13 @@
 {
   "main.css": "/cotterscs/static/css/main.1a4fa007.chunk.css",
-  "main.js": "/cotterscs/static/js/main.1a5a10be.chunk.js",
-  "main.js.map": "/cotterscs/static/js/main.1a5a10be.chunk.js.map",
+  "main.js": "/cotterscs/static/js/main.7a085b16.chunk.js",
+  "main.js.map": "/cotterscs/static/js/main.7a085b16.chunk.js.map",
   "runtime~main.js": "/cotterscs/static/js/runtime~main.22d88fc3.js",
   "runtime~main.js.map": "/cotterscs/static/js/runtime~main.22d88fc3.js.map",
   "static/js/2.62771aba.chunk.js": "/cotterscs/static/js/2.62771aba.chunk.js",
   "static/js/2.62771aba.chunk.js.map": "/cotterscs/static/js/2.62771aba.chunk.js.map",
   "index.html": "/cotterscs/index.html",
-  "precache-manifest.f58b78d07044264a161dcb680fa2ca6b.js": "/cotterscs/precache-manifest.f58b78d07044264a161dcb680fa2ca6b.js",
+  "precache-manifest.4945e965de06540b673a453f920c5d85.js": "/cotterscs/precache-manifest.4945e965de06540b673a453f920c5d85.js",
   "service-worker.js": "/cotterscs/service-worker.js",
   "static/css/main.1a4fa007.chunk.css.map": "/cotterscs/static/css/main.1a4fa007.chunk.css.map"
 }
