@@ -63,7 +63,8 @@ const log = console.log // eslint-disable-line no-unused-vars
     padding: 10px;
   `
 , SaveButton = styled.button`
-    background-color: #74fff8;
+    background-color: #805716;
+    color: #ffffff;
     width: 99%;
     padding: 20px 10px;
     margin: 5px;
@@ -218,8 +219,7 @@ class App extends Component {
         <button style={{
           width: '100%',
           padding: '15px',
-          backgroundColor: '#805716',
-          color: '#ffffff'
+          backgroundColor: '#74fff8'
         }} onClick={evt => addCodes(this)}>Add Codes</button>
         <ul id="report" style={{
           listStyleType: 'none'
