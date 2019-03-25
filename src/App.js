@@ -4,6 +4,7 @@ import './App.css';
 import * as R from 'ramda'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
+import UserModal from './UserModal'
 
 const log = console.log // eslint-disable-line no-unused-vars
 , chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
@@ -17,6 +18,10 @@ const log = console.log // eslint-disable-line no-unused-vars
     }))
   }
 , addUnitName = (comp, evt) => comp.setState({unitName: evt.target.value})
+, updateUserName = (comp, evt) => comp.setState({userName: evt.target.value})
+, saveUserName = (comp) => {
+    document.cookie=makeCookieString('userName', comp.state.userName, 365)
+  }
 , addCodes = comp => {
     if (!!comp.state.unitName && !!comp.state.chosenCodes.length) {
       return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
@@ -54,8 +59,15 @@ const log = console.log // eslint-disable-line no-unused-vars
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
     color: ${props => props.state.chosenCodes.includes(props.code) ? 'white' : 'none'};
-    width: 100%;
+    width: 99%;
     padding: 10px;
+  `
+, SaveButton = styled.button`
+    background-color: #74fff8;
+    width: 99%;
+    padding: 20px 10px;
+    margin: 5px;
+    border-radius: 10px;
   `
 // [String] -> [Array] -> null
 , handleCSVDownload = (columns, data) => {
@@ -121,10 +133,6 @@ const log = console.log // eslint-disable-line no-unused-vars
 class App extends Component {
   constructor() {
     super()
-    const deviceId = getCookie('deviceId')
-    if (!deviceId) {
-      document.cookie=makeCookieString('deviceId', getDeviceId(), 3650)
-    }
     this.state = {
       unServicedCodes: [
         'TV'
@@ -182,7 +190,8 @@ class App extends Component {
       unitName: '',
       unitCodes: [],
       allUnitCodes: [],
-      deviceId: getCookie('deviceId'),
+      userName: '',
+      deviceId: getCookie('userName'),
       showModal: false,
     }
   }
@@ -191,7 +200,10 @@ class App extends Component {
 
     return (
       <div>
-        <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
+        {!state.deviceId &&<input name="username" placeholder="User Name" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.userName} onChange={evt => updateUserName(this, evt)} type="text" />}
+        <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton>
+        <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
+
         {
           Object.keys(state.codes).map((k, i) =>
             <CodeButton
@@ -206,7 +218,8 @@ class App extends Component {
         <button style={{
           width: '100%',
           padding: '15px',
-          backgroundColor: '#74fff8'
+          backgroundColor: '#805716',
+          color: '#ffffff'
         }} onClick={evt => addCodes(this)}>Add Codes</button>
         <ul id="report" style={{
           listStyleType: 'none'
