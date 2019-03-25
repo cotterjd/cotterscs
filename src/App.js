@@ -4,7 +4,6 @@ import './App.css';
 import * as R from 'ramda'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
-import UserModal from './UserModal'
 
 const log = console.log // eslint-disable-line no-unused-vars
 , chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
