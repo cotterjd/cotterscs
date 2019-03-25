@@ -201,8 +201,8 @@ class App extends Component {
 
     return (
       <div>
-        {!state.deviceId &&<input name="username" placeholder="User Name" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.userName} onChange={evt => updateUserName(this, evt)} type="text" />}
-        <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton>
+        {!state.deviceId &&<input name="username" placeholder="User Name" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.userName} onChange={evt => updateUserName(this, evt)} type="text" />
+        <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton>}
         <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
 
         {
