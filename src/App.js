@@ -20,6 +20,7 @@ const log = console.log // eslint-disable-line no-unused-vars
 , updateUserName = (comp, evt) => comp.setState({userName: evt.target.value})
 , saveUserName = (comp) => {
     document.cookie=makeCookieString('userName', comp.state.userName, 365)
+    comp.setState({deviceId: comp.state.userName})
   }
 , addCodes = comp => {
     if (!!comp.state.unitName && !!comp.state.chosenCodes.length) {
