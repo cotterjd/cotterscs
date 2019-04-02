@@ -6,10 +6,6 @@ import {subHours} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
 
-/*var result = format(
-  new Date(2014, 1, 11),
-  'MM/DD/YYYY'
-)*/
 const log = console.log // eslint-disable-line no-unused-vars
 
 , addCode = (comp, code) => {
@@ -123,10 +119,12 @@ const log = console.log // eslint-disable-line no-unused-vars
     })
     .then(r => r.json())
     .then(r => {
-      console.log('first unit code', r.data.unitCodes[0])
-      console.log('createdat', r.data.unitCodes[0].createdAt)
-      console.log('formated', subHours(new Date(r.data.unitCodes[0].createdAt), 5))
-      comp.setState({allUnitCodes: r.data.unitCodes, showModal: true})
+      const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', subHours(new Date(uc.createdAt), 5), uc))
+/*var result = format(
+  new Date(2014, 1, 11),
+  'MM/DD/YYYY'
+)*/
+      comp.setState({allUnitCodes: withCSTTime, showModal: true})
     })
     .catch(console.error)
   }
