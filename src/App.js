@@ -119,12 +119,12 @@ const log = console.log // eslint-disable-line no-unused-vars
     })
     .then(r => r.json())
     .then(r => {
-      const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', subHours(new Date(uc.createdAt), 5), uc))
+      //const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', subHours(new Date(uc.createdAt), 5), uc))
 /*var result = format(
   new Date(2014, 1, 11),
   'MM/DD/YYYY'
 )*/
-      comp.setState({allUnitCodes: withCSTTime, showModal: true})
+      comp.setState({allUnitCodes: r.data.unitCodes, showModal: true})
     })
     .catch(console.error)
   }
