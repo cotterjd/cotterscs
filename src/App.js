@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import styled from 'styled-components';
 import './App.css';
 import * as R from 'ramda'
-import {subHours} from 'date-fns'
+import {subHours, format} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
 
@@ -120,11 +120,13 @@ const log = console.log // eslint-disable-line no-unused-vars
     .then(r => r.json())
     .then(r => {
       //const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', subHours(new Date(uc.createdAt), 5), uc))
+      const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', format(new Date(uc.createdAt), 'MM/DD/YYYY h:mm'), uc))
+
 /*var result = format(
   new Date(2014, 1, 11),
   'MM/DD/YYYY'
 )*/
-      comp.setState({allUnitCodes: r.data.unitCodes, showModal: true})
+      comp.setState({allUnitCodes: withCSTTime, showModal: true})
     })
     .catch(console.error)
   }
