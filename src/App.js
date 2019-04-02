@@ -6,10 +6,6 @@ import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
 
 const log = console.log // eslint-disable-line no-unused-vars
-, chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ123456789'
-, getRandomIndex = (xs) => Math.floor(Math.random() * ((xs.length - 1) + 1))
-, getId = chars => Array(6).fill(null).map((_) => chars[getRandomIndex(chars)]).join('')
-, getDeviceId = () => getId(chars)
 
 , addCode = (comp, code) => {
     comp.setState((oldState, props) => ({
@@ -44,12 +40,20 @@ const log = console.log // eslint-disable-line no-unused-vars
         },
       })
       .then(r => r.json())
-      .then(() => {
-         comp.setState((oldState) => ({
-           unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
-           chosenCodes: [],
-           unitName: '',
-         }))
+      .then(r => {
+         if(!!r && !!r.data && !!r.data.createUnitCode && !r.errors) {
+           comp.setState((oldState) => ({
+             unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
+             chosenCodes: [],
+             unitName: '',
+           }))
+         } else {
+           comp.setState((oldState) => ({
+             unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
+             chosenCodes: [],
+             unitName: '',
+           }))
+         }
          }
       )
       .catch(console.error)
