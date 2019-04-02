@@ -188,7 +188,7 @@ class App extends Component {
       , 'Key Not Work': 'Key Not Work'
       , 'Skip Per Management': 'Skip Per Management'
       , 'Minor': 'Minor'
-      , 'OTHER': 'OTHER'
+      , 'Denied Entry': 'Denied Entry'
       , 'Went Back': 'Went Back'
       },
       chosenCodes: [],
