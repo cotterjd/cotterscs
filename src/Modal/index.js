@@ -11,6 +11,10 @@ const
     top: 5px;
     font-size: 24px;
     opacity: 0.5;
+
+    :hover {
+      cursor: pointer;
+    }
   `
 ; // eslint-disable-line semi
 
