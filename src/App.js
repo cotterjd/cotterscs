@@ -156,6 +156,7 @@ class App extends Component {
       , 'Key Not Work'
       , 'Skip Per Management'
       , 'Minor'
+      , 'Denied Entry'
       , 'OTHER'
       ],
       servicedCodes: [
