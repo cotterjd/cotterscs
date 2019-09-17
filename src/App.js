@@ -20,44 +20,21 @@ const log = console.log // eslint-disable-line no-unused-vars
     comp.setState({deviceId: comp.state.userName})
   }
 , addCodes = comp => {
-    if (!!comp.state.unitName && !!comp.state.chosenCodes.length) {
-      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-        method: 'POST',
-        body: JSON.stringify({
-          query: `
-            mutation {
-              createUnitCode(data: {
-                deviceId: "${comp.state.deviceId}"
-                unit: "${comp.state.unitName}"
-                codes: "${comp.state.chosenCodes.join(', ')}"
-              }) {
-                id
-              }
-            }
-          `
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(r => r.json())
-      .then(r => {
-         if(!!r && !!r.data && !!r.data.createUnitCode && !r.errors) {
-           comp.setState((oldState) => ({
-             unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
-             chosenCodes: [],
-             unitName: '',
-           }))
-         } else {
-           comp.setState((oldState) => ({
-             unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
-             chosenCodes: [],
-             unitName: '',
-           }))
-         }
-         }
-      )
-      .catch(console.error)
+    const {unitName, chosenCodes} = comp.state
+    if (!!unitName && chosenCodes.length) {
+      if (chosenCodes.includes('Went Back')) {
+        getOldRecords(comp)
+        .then(r => {
+          if(!r.errors) {
+            deleteOldRecord(comp, R.head(r.data.unitCodes))
+          } else {
+            console.log(r.errors)
+          }
+        })
+        .then(r => saveCodes(comp))
+      } else {
+        saveCodes(comp)
+      }
     }
 
   }
@@ -65,13 +42,13 @@ const log = console.log // eslint-disable-line no-unused-vars
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
     color: ${props => props.state.chosenCodes.includes(props.code) ? 'white' : 'none'};
     width: 99%;
-    padding: 10px;
+    padding: 15px;
   `
 , SaveButton = styled.button`
     background-color: #805716;
     color: #ffffff;
     width: 99%;
-    padding: 20px 10px;
+    padding: 25px 15px;
     margin: 5px;
     border-radius: 10px;
   `
@@ -157,6 +134,7 @@ class App extends Component {
       , 'Skip Per Management'
       , 'Minor'
       , 'Denied Entry'
+      , 'see css'
       , 'OTHER'
       ],
       servicedCodes: [
@@ -173,6 +151,7 @@ class App extends Component {
       , 'Missing Back Refractory Panel'
       , 'Missing Right Refractory Panel'
       , 'Missing Base Panel'
+      , 'see  css'
       , 'Went Back'
       ],
       codes: {
@@ -219,7 +198,7 @@ class App extends Component {
         <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
 
         {
-          Object.keys(state.codes).map((k, i) =>
+          /*Object.keys(state.codes).map((k, i) =>
             <CodeButton
               state={state}
               code={k}
@@ -227,11 +206,36 @@ class App extends Component {
               onClick={evt => addCode(this, k)}
             >
               {state.codes[k]}
+            </CodeButton>)*/
+        }
+        {
+          state.servicedCodes.map((x, i) =>
+            <CodeButton
+              state={state}
+              code={x}
+              key={x}
+              onClick={evt => addCode(this, x)}
+            >
+              {x}
+            </CodeButton>)
+        }
+        <br />
+        <br />
+        <br />
+        {
+          state.unServicedCodes.map((x, i) =>
+            <CodeButton
+              state={state}
+              code={x}
+              key={x}
+              onClick={evt => addCode(this, x)}
+            >
+              {x}
             </CodeButton>)
         }
         <button style={{
           width: '100%',
-          padding: '15px',
+          padding: '20px',
           backgroundColor: '#74fff8'
         }} onClick={evt => addCodes(this)}>Add Codes</button>
         <ul id="report" style={{
@@ -242,7 +246,7 @@ class App extends Component {
         }
         </ul>
         <button style={{
-          padding: '20px',
+          padding: '25px',
           width: '100%',
           marginBottom: '50px'
         }} onClick={evt => getUnitCodesAndDownload(this)}>Download Report</button>
@@ -264,6 +268,91 @@ class App extends Component {
       </div>
     );
   }
+}
+
+function saveCodes(comp) {
+      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `
+            mutation {
+              createUnitCode(data: {
+                deviceId: "${comp.state.deviceId}"
+                unit: "${comp.state.unitName}"
+                codes: "${comp.state.chosenCodes.join(', ')}"
+              }) {
+                id
+              }
+            }
+          `
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(r => r.json())
+      .then(r => {
+         if(!!r && !!r.data && !!r.data.createUnitCode && !r.errors) {
+           comp.setState((oldState) => ({
+             unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
+             chosenCodes: [],
+             unitName: '',
+           }))
+         } else {
+           comp.setState((oldState) => ({
+             unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
+             chosenCodes: [],
+             unitName: '',
+           }))
+         }
+         }
+      )
+      .catch(console.error)
+}
+function deleteOldRecord(comp, recordToDelete) {
+      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `
+            mutation {
+              deleteUnitCode(where: {
+                id: "${recordToDelete.id}"
+              }) {
+                id
+              }
+            }
+          `
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(r => r.json())
+      .catch(console.error)
+}
+function getOldRecords(comp) {
+      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+        method: 'POST',
+        body: JSON.stringify({
+          query: `
+            {
+              unitCodes(orderBy: createdAt_DESC where: {
+                deviceId: "${comp.state.deviceId}"
+                unit: "${comp.state.unitName}"
+              }) {
+                id
+                createdAt
+                codes
+              }
+            }
+          `
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      .then(r => r.json())
+      .catch(console.error)
 }
 
 export default App;
