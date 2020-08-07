@@ -40,7 +40,7 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
-    color: ${props => props.state.chosenCodes.includes(props.code) ? 'white' : 'none'};
+    color: ${props => props.state.chosenCodes.includes(props.code) ? 'white' : (props.code.includes(`Completed`) ? 'green' : 'none')};
     width: 99%;
     padding: 15px;
   `
@@ -153,6 +153,7 @@ class App extends Component {
       , 'Missing Base Panel'
       , 'see  css'
       , 'Went Back'
+      , `Completed. No Issues.`
       ],
       codes: {
         'Missing Chimney Cap': 'Missing Chimney Cap'
