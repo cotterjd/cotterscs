@@ -2,13 +2,16 @@ import React, { Component } from 'react';
 import styled from 'styled-components';
 import './App.css';
 import * as R from 'ramda'
-import {subHours, format} from 'date-fns'
+import {format} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
 
 const log = console.log // eslint-disable-line no-unused-vars
 
 , addCode = (comp, code) => {
+    if (code === `OTHER`) {
+      comp.setState({showOtherModal: true})
+    }
     comp.setState((oldState, props) => ({
       chosenCodes: oldState.chosenCodes.includes(code) ? oldState.chosenCodes.filter(x => x !== code) : oldState.chosenCodes.concat(code)
     }))
@@ -20,7 +23,7 @@ const log = console.log // eslint-disable-line no-unused-vars
     comp.setState({deviceId: comp.state.userName})
   }
 , addCodes = comp => {
-    const {unitName, chosenCodes} = comp.state
+    const { unitName, chosenCodes, otherDesc } = comp.state
     if (!!unitName && chosenCodes.length) {
       if (chosenCodes.includes('Went Back')) {
         getOldRecords(comp)
@@ -32,6 +35,13 @@ const log = console.log // eslint-disable-line no-unused-vars
           }
         })
         .then(r => saveCodes(comp))
+      } else if (chosenCodes.includes(`OTHER`)) {
+        comp.setState(state => ({
+          chosenCodes: state.chosenCodes.map(cc => {
+            if (cc === `OTHER`) return `OTHER ${state.otherDesc}`
+            return cc
+          })
+        }), () => saveCodes(comp))
       } else {
         saveCodes(comp)
       }
@@ -51,6 +61,11 @@ const log = console.log // eslint-disable-line no-unused-vars
     padding: 25px 15px;
     margin: 5px;
     border-radius: 10px;
+  `
+, AddCodesButton = styled.button`
+    width: 100%;
+    padding: 20px;
+    background-color: #74fff8;
   `
 // [String] -> [Array] -> null
 , handleCSVDownload = (columns, data) => {
@@ -96,13 +111,7 @@ const log = console.log // eslint-disable-line no-unused-vars
     })
     .then(r => r.json())
     .then(r => {
-      //const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', subHours(new Date(uc.createdAt), 5), uc))
       const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', format(new Date(uc.createdAt), 'MM/DD/YYYY h:mm'), uc))
-
-/*var result = format(
-  new Date(2014, 1, 11),
-  'MM/DD/YYYY'
-)*/
       comp.setState({allUnitCodes: withCSTTime, showModal: true})
     })
     .catch(console.error)
@@ -114,7 +123,10 @@ const log = console.log // eslint-disable-line no-unused-vars
     comp.setState({showModal: false})
   }
 , downloadUnservicedUnitCodesFromDevice = (comp, deviceId) => {
-    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && comp.state.unServicedCodes.includes(x.codes.split(', ')[0]))
+    const deviceUnitCodes = comp.state.allUnitCodes
+      .filter(
+        unitCode => unitCode.deviceId === deviceId && !comp.state.servicedCodes.includes(unitCode.codes.split(', ')[0])
+      )
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
     comp.setState({showModal: false})
@@ -155,31 +167,6 @@ class App extends Component {
       , 'Went Back'
       , `Completed. No Issues.`
       ],
-      codes: {
-        'Missing Chimney Cap': 'Missing Chimney Cap'
-      , 'Missing Damper': 'Missing Damper'
-      , 'Broken Damper': 'Broken Damper'
-      , 'Missing Spark Screen': 'Missing Spark Screen'
-      , 'Damaged Spark Screen': 'Damaged Spark Screen'
-      , 'Damaged Left Refractory Panel': 'Damaged Left Refractory Panel'
-      , 'Damaged Back Refractory Panel': 'Damaged Back Refractory Panel'
-      , 'Damaged Right Refractory Panel': 'Damaged Right Refractory Panel'
-      , 'Damaged Base Panel': 'Damaged Base Panel'
-      , 'Missing Left Refractory Panel': 'Missing Left Refractory Panel'
-      , 'Missing Back Refractory Panel': 'Missing Back Refractory Panel'
-      , 'Missing Right Refractory Panel': 'Missing Right Refractory Panel'
-      , 'Missing Base Panel': 'Missing Base Panel'
-      , 'TV': 'TV'
-      , 'Dog': 'Dog'
-      , 'Blocked': 'Blocked'
-      , 'Locked From The Inside': 'Locked from the inside'
-      , 'No Key': 'No Key'
-      , 'Key Not Work': 'Key Not Work'
-      , 'Skip Per Management': 'Skip Per Management'
-      , 'Minor': 'Minor'
-      , 'Denied Entry': 'Denied Entry'
-      , 'Went Back': 'Went Back'
-      },
       chosenCodes: [],
       unitName: '',
       unitCodes: [],
@@ -187,8 +174,21 @@ class App extends Component {
       userName: '',
       deviceId: getCookie('userName'),
       showModal: false,
+      showOtherModal: false,
+      otherDesc: ``,
     }
   }
+
+  updateOtherDesc = evt => {
+    this.setState({
+      otherDesc: evt.target.value,
+      showOtherModal: false,
+    })
+  }
+  closeOtherModal = evt => {
+    this.setState({ showOtherModal: false })
+  }
+
   render() {
     const { state } = this
 
@@ -197,18 +197,6 @@ class App extends Component {
         {!state.deviceId &&<div><input name="username" placeholder="User Name" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.userName} onChange={evt => updateUserName(this, evt)} type="text" />
         <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton></div>}
         <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
-
-        {
-          /*Object.keys(state.codes).map((k, i) =>
-            <CodeButton
-              state={state}
-              code={k}
-              key={k}
-              onClick={evt => addCode(this, k)}
-            >
-              {state.codes[k]}
-            </CodeButton>)*/
-        }
         {
           state.servicedCodes.map((x, i) =>
             <CodeButton
@@ -234,11 +222,7 @@ class App extends Component {
               {x}
             </CodeButton>)
         }
-        <button style={{
-          width: '100%',
-          padding: '20px',
-          backgroundColor: '#74fff8'
-        }} onClick={evt => addCodes(this)}>Add Codes</button>
+        <AddCodesButton onClick={evt => addCodes(this)}>Add Codes</AddCodesButton>
         <ul id="report" style={{
           listStyleType: 'none'
         }}>
@@ -260,11 +244,19 @@ class App extends Component {
             Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
               .map(x =>
                 (<div>
-                  <button key={x} onClick={evt => downloadServicedUnitCodesFromDevice(this, x)}>{`Device ${x}`}</button>
-                  <button key={x} onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`Device ${x} (NA)`}</button>
+                  <button key={x} onClick={evt => downloadServicedUnitCodesFromDevice(this, x)}>{x}</button>
+                  <button key={x} onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
                 </div>)
               )
           }
+        </Modal>
+        <Modal
+          open={state.showOtherModal}
+          close={evt => this.setState({showOtherModal: false})}
+        >
+          <h4>Add description</h4>
+          <input type="text" value={this.otherDesc} onBlur={this.updateOtherDesc} />
+          <button onClick={evt => this.setState({showOtherModal: false})}>Save</button>
         </Modal>
       </div>
     );
