@@ -116,8 +116,16 @@ const log = console.log // eslint-disable-line no-unused-vars
     })
     .catch(console.error)
   }
-, downloadServicedUnitCodesFromDevice = (comp, deviceId) => {
-    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && comp.state.servicedCodes.includes(x.codes.split(', ')[0]))
+  // assume codes are put in correctly, only first has to match because they'll be the same type
+, firstCodeMatches = (codes, x) => codes.includes(x.codes.split(', ')[0])
+, downloadServiceWithIssuesUnitCodes = (comp, deviceId) => {
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && firstCodeMatches(comp.state.servicedWithIssuesCodes, x))
+    const data = formatData(deviceUnitCodes)
+    handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
+    comp.setState({showModal: false})
+  }
+, downloadServiceNoIssuesUnitCodes = (comp, deviceId) => {
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && firstCodeMatches(comp.state.servicedNoIssuesCodes, x))
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
     comp.setState({showModal: false})
@@ -125,7 +133,10 @@ const log = console.log // eslint-disable-line no-unused-vars
 , downloadUnservicedUnitCodesFromDevice = (comp, deviceId) => {
     const deviceUnitCodes = comp.state.allUnitCodes
       .filter(
-        unitCode => unitCode.deviceId === deviceId && !comp.state.servicedCodes.includes(unitCode.codes.split(', ')[0])
+        unitCode => unitCode.deviceId === deviceId &&
+        // if not No issues and not serviced with issues, it's unserviced
+        !firstCodeMatches(comp.state.servicedWithIssuesCodes, unitCode) &&
+        !firstCodeMatches(comp.state.servicedNoIssuesCodes, unitCode)
       )
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
@@ -149,7 +160,7 @@ class App extends Component {
       , 'see css'
       , 'OTHER'
       ],
-      servicedCodes: [
+      servicedWithIssuesCodes: [
         'Missing Chimney Cap'
       , 'Missing Damper'
       , 'Broken Damper'
@@ -165,7 +176,9 @@ class App extends Component {
       , 'Missing Base Panel'
       , 'see  css'
       , 'Went Back'
-      , `Completed. No Issues.`
+      ],
+      servicedNoIssuesCodes: [
+        `Completed. No Issues.`
       ],
       chosenCodes: [],
       unitName: '',
@@ -198,7 +211,7 @@ class App extends Component {
         <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton></div>}
         <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
         {
-          state.servicedCodes.map((x, i) =>
+          state.servicedWithIssuesCodes.map((x, i) =>
             <CodeButton
               state={state}
               code={x}
@@ -209,6 +222,17 @@ class App extends Component {
             </CodeButton>)
         }
         <br />
+        {
+          state.servicedNoIssuesCodes.map((x, i) =>
+            <CodeButton
+              state={state}
+              code={x}
+              key={x}
+              onClick={evt => addCode(this, x)}
+            >
+              {x}
+            </CodeButton>)
+        }
         <br />
         <br />
         {
@@ -244,7 +268,8 @@ class App extends Component {
             Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
               .map(x =>
                 (<div>
-                  <button key={x} onClick={evt => downloadServicedUnitCodesFromDevice(this, x)}>{x}</button>
+                  <button key={x} onClick={evt => downloadServiceNoIssuesUnitCodes(this, x)}>{`${x} (Completed. No Issues)`}</button>
+                  <button key={x} onClick={evt => downloadServiceWithIssuesUnitCodes(this, x)}>{`${x} (Completed with issues)`}</button>
                   <button key={x} onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
                 </div>)
               )
