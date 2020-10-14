@@ -344,7 +344,7 @@ class App extends Component {
                 </div>)
               )
           }
-          <h4>Job Reports</h4>
+          <h4>Property Reports</h4>
           {
             Object.keys(R.groupBy(R.prop(`job`), this.state.allUnitCodes)).map(job => {
               return <button key={job} onClick={evt => downloadPerJob(this, job)}>{job}</button>
