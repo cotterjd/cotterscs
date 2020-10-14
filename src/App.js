@@ -18,9 +18,18 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 , addUnitName = (comp, evt) => comp.setState({unitName: evt.target.value})
 , updateUserName = (comp, evt) => comp.setState({userName: evt.target.value})
+, updateJobName = (comp, evt) => comp.setState({job: evt.target.value})
 , saveUserName = (comp) => {
     document.cookie=makeCookieString('userName', comp.state.userName, 365)
     comp.setState({deviceId: comp.state.userName})
+  }
+, saveJobName = (comp) => {
+    document.cookie=makeCookieString('job', comp.state.jobName, 365)
+    comp.setState({jobName: comp.state.job})
+  }
+, endJob = (comp) => {
+    document.cookie=makeCookieString('job', ``, 365)
+    comp.setState({jobName: ``, job: ``})
   }
 , addCodes = comp => {
     const { unitName, chosenCodes, otherDesc } = comp.state
@@ -37,8 +46,8 @@ const log = console.log // eslint-disable-line no-unused-vars
         .then(r => saveCodes(comp))
       } else if (chosenCodes.includes(`OTHER`)) {
         comp.setState(state => ({
-          chosenCodes: state.chosenCodes.map(cc => {
-            if (cc === `OTHER`) return `OTHER ${state.otherDesc}`
+          chosenCodes: chosenCodes.map(cc => {
+            if (cc === `OTHER`) return `OTHER ${otherDesc}`
             return cc
           })
         }), () => saveCodes(comp))
@@ -46,7 +55,6 @@ const log = console.log // eslint-disable-line no-unused-vars
         saveCodes(comp)
       }
     }
-
   }
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
@@ -61,6 +69,24 @@ const log = console.log // eslint-disable-line no-unused-vars
     padding: 25px 15px;
     margin: 5px;
     border-radius: 10px;
+  `
+, SaveJobButton = styled.button`
+    background-color: green;
+    color: #ffffff;
+    width: 99%;
+    padding: 25px 15px;
+    margin: 5px;
+    border-radius: 10px;
+    text-transform: uppercase;
+  `
+, EndJobButton = styled.button`
+    background-color: red;
+    color: #ffffff;
+    width: 99%;
+    padding: 25px 15px;
+    margin: 5px;
+    border-radius: 10px;
+    text-transform: uppercase;
   `
 , AddCodesButton = styled.button`
     width: 100%;
@@ -89,7 +115,7 @@ const log = console.log // eslint-disable-line no-unused-vars
     link.click()
     document.body.removeChild(link)
   }
-, formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt, x.deviceId ]).reverse()
+, formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt, x.deviceId, x.job ]).reverse()
 , getUnitCodesAndDownload = (comp) => {
     return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
       method: 'POST',
@@ -101,6 +127,7 @@ const log = console.log // eslint-disable-line no-unused-vars
               codes
               createdAt
               deviceId
+              job
             }
           }
         `
@@ -121,13 +148,13 @@ const log = console.log // eslint-disable-line no-unused-vars
 , downloadServiceWithIssuesUnitCodes = (comp, deviceId) => {
     const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && firstCodeMatches(comp.state.servicedWithIssuesCodes, x))
     const data = formatData(deviceUnitCodes)
-    handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
+    handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
   }
 , downloadServiceNoIssuesUnitCodes = (comp, deviceId) => {
     const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && firstCodeMatches(comp.state.servicedNoIssuesCodes, x))
     const data = formatData(deviceUnitCodes)
-    handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
+    handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
   }
 , downloadUnservicedUnitCodesFromDevice = (comp, deviceId) => {
@@ -139,7 +166,15 @@ const log = console.log // eslint-disable-line no-unused-vars
         !firstCodeMatches(comp.state.servicedNoIssuesCodes, unitCode)
       )
     const data = formatData(deviceUnitCodes)
-    handleCSVDownload(['unit', 'codes', 'created date', 'device ID'], data)
+    handleCSVDownload(comp.state.columns, data)
+    comp.setState({showModal: false})
+  }
+, downloadAllUnitCodesFromDevice = (comp, deviceId) => {
+    log(`HEYYY 3`)
+    const deviceUnitCodes = comp.state.allUnitCodes
+      .filter(unitCode => unitCode.deviceId === deviceId)
+    const data = formatData(deviceUnitCodes)
+    handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
   }
 ;
@@ -147,6 +182,17 @@ class App extends Component {
   constructor() {
     super()
     this.state = {
+      chosenCodes: [],
+      unitName: '',
+      unitCodes: [],
+      allUnitCodes: [],
+      userName: '',
+      deviceId: getCookie('userName'),
+      jobName: getCookie('job'),
+      showModal: false,
+      showOtherModal: false,
+      otherDesc: ``,
+      columns: ['unit', 'codes', 'created date', 'device ID', `job`],
       unServicedCodes: [
         'TV'
       , 'Dog'
@@ -180,15 +226,6 @@ class App extends Component {
       servicedNoIssuesCodes: [
         `Completed. No Issues.`
       ],
-      chosenCodes: [],
-      unitName: '',
-      unitCodes: [],
-      allUnitCodes: [],
-      userName: '',
-      deviceId: getCookie('userName'),
-      showModal: false,
-      showOtherModal: false,
-      otherDesc: ``,
     }
   }
 
@@ -207,8 +244,34 @@ class App extends Component {
 
     return (
       <div>
-        {!state.deviceId &&<div><input name="username" placeholder="User Name" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.userName} onChange={evt => updateUserName(this, evt)} type="text" />
-        <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton></div>}
+        {
+          !state.deviceId &&
+            <div>
+              <input
+                name="username"
+                placeholder="User Name"
+                style={{width: '100%', padding: '20px', boxSizing: 'border-box'}}
+                value={state.userName}
+                onChange={evt => updateUserName(this, evt)}
+                type="text"
+              />
+              <SaveButton onClick={evt => saveUserName(this)}>Save User Name</SaveButton>
+            </div>
+        }
+        {
+          !state.jobName &&
+            <div>
+              <input
+                name="jobname"
+                placeholder="Job Name"
+                style={{width: '100%', padding: '20px', boxSizing: 'border-box'}}
+                value={state.job}
+                onChange={evt => updateJobName(this, evt)}
+                type="text"
+              />
+              <SaveJobButton onClick={evt => saveJobName(this)}>Start Job</SaveJobButton>
+            </div>
+        }
         <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
         {
           state.servicedWithIssuesCodes.map((x, i) =>
@@ -254,6 +317,7 @@ class App extends Component {
           state.unitCodes.map((x, i) => <li key={i}>{x}</li>)
         }
         </ul>
+        { !!this.state.jobName &&<EndJobButton onClick={evt => endJob(this)}>End Job</EndJobButton>}
         <button style={{
           padding: '25px',
           width: '100%',
@@ -271,6 +335,7 @@ class App extends Component {
                   <button key={x} onClick={evt => downloadServiceNoIssuesUnitCodes(this, x)}>{`${x} (Completed. No Issues)`}</button>
                   <button key={x} onClick={evt => downloadServiceWithIssuesUnitCodes(this, x)}>{`${x} (Completed with issues)`}</button>
                   <button key={x} onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
+                  <button key={x} onClick={evt => downloadAllUnitCodesFromDevice(this, x)}>{`All`}</button>
                 </div>)
               )
           }
@@ -298,8 +363,9 @@ function saveCodes(comp) {
                 deviceId: "${comp.state.deviceId}"
                 unit: "${comp.state.unitName}"
                 codes: "${comp.state.chosenCodes.join(', ')}"
+                job: "${comp.state.jobName}"
               }) {
-                id
+                id job
               }
             }
           `
@@ -361,6 +427,7 @@ function getOldRecords(comp) {
                 id
                 createdAt
                 codes
+                job
               }
             }
           `
