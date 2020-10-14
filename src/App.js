@@ -24,6 +24,7 @@ const log = console.log // eslint-disable-line no-unused-vars
     comp.setState({deviceId: comp.state.userName})
   }
 , saveJobName = (comp) => {
+    if (!comp.state.job) alert(`Property name required`)
     document.cookie=makeCookieString('job', comp.state.jobName, 365)
     comp.setState({jobName: comp.state.job})
   }
@@ -157,6 +158,11 @@ const log = console.log // eslint-disable-line no-unused-vars
     handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
   }
+, downloadPerJob = (comp, job) => {
+    const jobUnitCodes = comp.state.allUnitCodes.filter(x => x.job === job)
+    const data = formatData(jobUnitCodes)
+    handleCSVDownload(comp.state.columns, data)
+  }
 , downloadUnservicedUnitCodesFromDevice = (comp, deviceId) => {
     const deviceUnitCodes = comp.state.allUnitCodes
       .filter(
@@ -170,7 +176,6 @@ const log = console.log // eslint-disable-line no-unused-vars
     comp.setState({showModal: false})
   }
 , downloadAllUnitCodesFromDevice = (comp, deviceId) => {
-    log(`HEYYY 3`)
     const deviceUnitCodes = comp.state.allUnitCodes
       .filter(unitCode => unitCode.deviceId === deviceId)
     const data = formatData(deviceUnitCodes)
@@ -263,13 +268,13 @@ class App extends Component {
             <div>
               <input
                 name="jobname"
-                placeholder="Job Name"
+                placeholder="Property Name"
                 style={{width: '100%', padding: '20px', boxSizing: 'border-box'}}
                 value={state.job}
                 onChange={evt => updateJobName(this, evt)}
                 type="text"
               />
-              <SaveJobButton onClick={evt => saveJobName(this)}>Start Job</SaveJobButton>
+              <SaveJobButton onClick={evt => saveJobName(this)}>Start new property</SaveJobButton>
             </div>
         }
         <input name="unit" placeholder="Unit" style={{width: '100%', padding: '20px', boxSizing: 'border-box'}} value={state.unitName} onChange={evt => addUnitName(this, evt)} type="text" />
@@ -317,7 +322,7 @@ class App extends Component {
           state.unitCodes.map((x, i) => <li key={i}>{x}</li>)
         }
         </ul>
-        { !!this.state.jobName &&<EndJobButton onClick={evt => endJob(this)}>End Job</EndJobButton>}
+        { !!this.state.jobName &&<EndJobButton onClick={evt => endJob(this)}>End Property</EndJobButton>}
         <button style={{
           padding: '25px',
           width: '100%',
@@ -338,6 +343,12 @@ class App extends Component {
                   <button key={x} onClick={evt => downloadAllUnitCodesFromDevice(this, x)}>{`All`}</button>
                 </div>)
               )
+          }
+          <h4>Job Reports</h4>
+          {
+            Object.keys(R.groupBy(R.prop(`job`), this.state.allUnitCodes)).map(job => {
+              return <button key={job} onClick={evt => downloadPerJob(this, job)}>{job}</button>
+            })
           }
         </Modal>
         <Modal
