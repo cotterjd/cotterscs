@@ -1,11 +1,11 @@
 self.__precacheManifest = [
   {
-    "revision": "50e919019cca6f722b1e",
+    "revision": "84da40af51634c1733b4",
     "url": "/cotterscs/static/css/main.1a4fa007.chunk.css"
   },
   {
-    "revision": "50e919019cca6f722b1e",
-    "url": "/cotterscs/static/js/main.50e91901.chunk.js"
+    "revision": "84da40af51634c1733b4",
+    "url": "/cotterscs/static/js/main.84da40af.chunk.js"
   },
   {
     "revision": "22d88fc37c1257cf8cad",
@@ -16,7 +16,7 @@ self.__precacheManifest = [
     "url": "/cotterscs/static/js/2.42df898d.chunk.js"
   },
   {
-    "revision": "ae45bae3e625ebce785da81b583e3bc6",
+    "revision": "9d63c9001b3a9423fc13935879cb177c",
     "url": "/cotterscs/index.html"
   }
 ];
