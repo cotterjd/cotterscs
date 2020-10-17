@@ -160,7 +160,8 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 , downloadPerJob = (comp, job) => {
     const jobUnitCodes = comp.state.allUnitCodes.filter(x => x.job === job)
-    const data = formatData(jobUnitCodes)
+    const sortedCodes = R.sortBy(R.prop(`codes`), jobUnitCodes) 
+    const data = formatData(sortedCodes)
     handleCSVDownload(comp.state.columns, data)
   }
 , downloadUnservicedUnitCodesFromDevice = (comp, deviceId) => {
@@ -335,12 +336,12 @@ class App extends Component {
           <h4>Which device to you want to download codes from</h4>
           {
             Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
-              .map(x =>
-                (<div>
-                  <button key={x} onClick={evt => downloadServiceNoIssuesUnitCodes(this, x)}>{`${x} (Completed. No Issues)`}</button>
-                  <button key={x} onClick={evt => downloadServiceWithIssuesUnitCodes(this, x)}>{`${x} (Completed with issues)`}</button>
-                  <button key={x} onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
-                  <button key={x} onClick={evt => downloadAllUnitCodesFromDevice(this, x)}>{`All`}</button>
+              .map((x, i) =>
+                (<div key={i}>
+                  <button onClick={evt => downloadServiceNoIssuesUnitCodes(this, x)}>{`${x} (Completed. No Issues)`}</button>
+                  <button onClick={evt => downloadServiceWithIssuesUnitCodes(this, x)}>{`${x} (Completed with issues)`}</button>
+                  <button onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
+                  <button onClick={evt => downloadAllUnitCodesFromDevice(this, x)}>{`All`}</button>
                 </div>)
               )
           }
