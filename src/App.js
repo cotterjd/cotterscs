@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import styled from 'styled-components';
 import './App.css';
 import * as R from 'ramda'
+import xhr from './xhr'
 import {format} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
@@ -31,31 +32,6 @@ const log = console.log // eslint-disable-line no-unused-vars
 , endJob = (comp) => {
     document.cookie=makeCookieString('job', ``, 365)
     comp.setState({jobName: ``, job: ``})
-  }
-, addCodes = comp => {
-    const { unitName, chosenCodes, otherDesc } = comp.state
-    if (!!unitName && chosenCodes.length) {
-      if (chosenCodes.includes('Went Back')) {
-        getOldRecords(comp)
-        .then(r => {
-          if(!r.errors) {
-            deleteOldRecord(comp, R.head(r.data.unitCodes))
-          } else {
-            console.log(r.errors)
-          }
-        })
-        .then(r => saveCodes(comp))
-      } else if (chosenCodes.includes(`OTHER`)) {
-        comp.setState(state => ({
-          chosenCodes: chosenCodes.map(cc => {
-            if (cc === `OTHER`) return `OTHER ${otherDesc}`
-            return cc
-          })
-        }), () => saveCodes(comp))
-      } else {
-        saveCodes(comp)
-      }
-    }
   }
 , CodeButton = styled.button`
     background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
@@ -183,10 +159,103 @@ const log = console.log // eslint-disable-line no-unused-vars
     handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
   }
+, getOldRecords = (comp) => {
+    return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+      method: 'POST',
+      body: JSON.stringify({
+        query: `
+          {
+            unitCodes(orderBy: createdAt_DESC where: {
+              deviceId: "${comp.state.deviceId}"
+              unit: "${comp.state.unitName}"
+            }) {
+              id
+              createdAt
+              codes
+              job
+            }
+          }
+        `
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    .then(r => r.json())
+    .catch(console.error)
+  }
+, deleteOldRecord = (comp, recordToDelete) => {
+    return xhr.del(recordToDelete.id)
+      .then(r => r.json())
+      .catch(console.error)
+  }
+, redoCode = (comp, unitCodeArray, i) => {
+    const id = R.head(unitCodeArray) 
+    const unitName = R.head(R.tail(unitCodeArray))
+    const chosenCodes = R.last(unitCodeArray).split(`, `)
+    xhr.del(id)
+      .then(r => r.json())
+      .then(_ => {
+        comp.setState({
+          unitName, 
+          chosenCodes,
+        })
+      })
+      .catch(console.error)
+  }
+, goodResponse = (r) => {
+    return r && r.data && r.data.createUnitCode && !r.errors
+  }
+, addCodesAndReset = (response, oldState) => {
+    const newUnitCode = response.data.createUnitCode
+    return {
+      unitCodes: [...oldState.unitCodes, [newUnitCode.id, oldState.unitName, oldState.chosenCodes.join(', ')]],
+      chosenCodes: [],
+      unitName: '',
+    }
+  }
+, saveCodes = (comp) => {
+    return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
+      method: 'POST',
+      body: JSON.stringify({
+        query: `
+          mutation {
+            createUnitCode(data: {
+              deviceId: "${comp.state.deviceId}"
+              unit: "${comp.state.unitName}"
+              codes: "${comp.state.chosenCodes.join(', ')}"
+              job: "${comp.state.jobName}"
+            }) {
+              id job unit
+            }
+          }
+        `
+      }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    .then(r => r.json())
+    .then(r => {
+       if(goodResponse(r)) {
+         console.log(`RESPONSE`, r)
+         comp.setState(oldState => addCodesAndReset(r, oldState))
+       } else {
+         comp.setState((oldState) => ({
+           unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
+           chosenCodes: [],
+           unitName: '',
+         }))
+       }
+       }
+    )
+    .catch(console.error)
+  }
 ;
 class App extends Component {
   constructor() {
     super()
+    this.foobar = React.createRef()
     this.state = {
       chosenCodes: [],
       unitName: '',
@@ -243,6 +312,31 @@ class App extends Component {
   }
   closeOtherModal = evt => {
     this.setState({ showOtherModal: false })
+  }
+  addCodes = evt => {
+    const { unitName, chosenCodes, otherDesc } = this.state
+    if (!!unitName && chosenCodes.length) {
+      if (chosenCodes.includes('Went Back')) {
+        getOldRecords(this)
+        .then(r => {
+          if(!r.errors) {
+            deleteOldRecord(this, R.head(r.data.unitCodes))
+          } else {
+            console.log(r.errors)
+          }
+        })
+        .then(r => saveCodes(this))
+      } else if (chosenCodes.includes(`OTHER`)) {
+        this.setState(state => ({
+          chosenCodes: chosenCodes.map(cc => {
+            if (cc === `OTHER`) return `OTHER ${otherDesc}`
+            return cc
+          })
+        }), () => saveCodes(this))
+      } else {
+        saveCodes(this)
+      }
+    }
   }
 
   render() {
@@ -315,12 +409,14 @@ class App extends Component {
               {x}
             </CodeButton>)
         }
-        <AddCodesButton onClick={evt => addCodes(this)}>Add Codes</AddCodesButton>
+        <AddCodesButton onClick={this.addCodes}>Add Codes</AddCodesButton>
         <ul id="report" style={{
           listStyleType: 'none'
         }}>
         {
-          state.unitCodes.map((x, i) => <li key={i}>{x}</li>)
+          state.unitCodes.map((x, i) => <li key={i}>
+              {x}<button onClick={evt => redoCode(this, x, i)}>Redo</button>
+              </li>)
         }
         </ul>
         { !!this.state.jobName &&<EndJobButton onClick={evt => endJob(this)}>End Property</EndJobButton>}
@@ -363,93 +459,6 @@ class App extends Component {
       </div>
     );
   }
-}
-
-function saveCodes(comp) {
-      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-        method: 'POST',
-        body: JSON.stringify({
-          query: `
-            mutation {
-              createUnitCode(data: {
-                deviceId: "${comp.state.deviceId}"
-                unit: "${comp.state.unitName}"
-                codes: "${comp.state.chosenCodes.join(', ')}"
-                job: "${comp.state.jobName}"
-              }) {
-                id job
-              }
-            }
-          `
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(r => r.json())
-      .then(r => {
-         if(!!r && !!r.data && !!r.data.createUnitCode && !r.errors) {
-           comp.setState((oldState) => ({
-             unitCodes: [...oldState.unitCodes, [oldState.unitName, oldState.chosenCodes.join(', ')]],
-             chosenCodes: [],
-             unitName: '',
-           }))
-         } else {
-           comp.setState((oldState) => ({
-             unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
-             chosenCodes: [],
-             unitName: '',
-           }))
-         }
-         }
-      )
-      .catch(console.error)
-}
-function deleteOldRecord(comp, recordToDelete) {
-      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-        method: 'POST',
-        body: JSON.stringify({
-          query: `
-            mutation {
-              deleteUnitCode(where: {
-                id: "${recordToDelete.id}"
-              }) {
-                id
-              }
-            }
-          `
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(r => r.json())
-      .catch(console.error)
-}
-function getOldRecords(comp) {
-      return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-        method: 'POST',
-        body: JSON.stringify({
-          query: `
-            {
-              unitCodes(orderBy: createdAt_DESC where: {
-                deviceId: "${comp.state.deviceId}"
-                unit: "${comp.state.unitName}"
-              }) {
-                id
-                createdAt
-                codes
-                job
-              }
-            }
-          `
-        }),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      })
-      .then(r => r.json())
-      .catch(console.error)
 }
 
 export default App;
