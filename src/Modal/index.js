@@ -35,7 +35,7 @@ export default class Modal extends React.Component {
         top: 0;
         left: 0;
 
-        overflow-y: scroll;
+        overflow-y: auto;
         padding: 30px;
         display: ${props => props.open ? 'block' : 'none'};
         z-index: 3;

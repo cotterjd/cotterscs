@@ -10,7 +10,7 @@ import Modal from './Modal'
 const log = console.log // eslint-disable-line no-unused-vars
 
 , addCode = (comp, code) => {
-    if (code === `OTHER`) {
+    if (code === `OTHER` || code === `Broken Damper - Other`) {
       comp.setState({showOtherModal: true})
     }
     comp.setState((oldState, props) => ({
@@ -123,7 +123,9 @@ const log = console.log // eslint-disable-line no-unused-vars
   // assume codes are put in correctly, only first has to match because they'll be the same type
 , firstCodeMatches = (codes, x) => codes.includes(x.codes.split(', ')[0])
 , downloadServiceWithIssuesUnitCodes = (comp, deviceId) => {
-    const deviceUnitCodes = comp.state.allUnitCodes.filter(x => x.deviceId === deviceId && firstCodeMatches(comp.state.servicedWithIssuesCodes, x))
+    const deviceUnitCodes = comp.state.allUnitCodes.filter(
+        x => x.deviceId === deviceId && (firstCodeMatches(comp.state.servicedWithIssuesCodes, x) || x.codes.split(`, `).some(code => code.includes(`Broken Damper - Other`) ) )
+        )
     const data = formatData(deviceUnitCodes)
     handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
@@ -166,7 +168,7 @@ const log = console.log // eslint-disable-line no-unused-vars
         query: `
           {
             unitCodes(orderBy: createdAt_DESC where: {
-              deviceId: "${comp.state.deviceId}"
+              job: "${comp.state.jobName}"
               unit: "${comp.state.unitName}"
             }) {
               id
@@ -284,7 +286,10 @@ class App extends Component {
       servicedWithIssuesCodes: [
         'Missing Chimney Cap'
       , 'Missing Damper'
-      , 'Broken Damper'
+      , 'Broken Damper - Other'
+      , 'Broken Damper - stays open'
+      , 'Broken Damper - closed/won\'t open'
+      , 'Broken Damper - Not Connected'
       , 'Missing Spark Screen'
       , 'Damaged Spark Screen'
       , 'Damaged Left Refractory Panel'
@@ -330,6 +335,13 @@ class App extends Component {
         this.setState(state => ({
           chosenCodes: chosenCodes.map(cc => {
             if (cc === `OTHER`) return `OTHER ${otherDesc}`
+            return cc
+          })
+        }), () => saveCodes(this))
+      } else if (chosenCodes.includes(`Broken Damper - Other`)) {
+        this.setState(state => ({
+          chosenCodes: chosenCodes.map(cc => {
+            if (cc === `Broken Damper - Other`) return `Broken Damper - Other ${otherDesc}`
             return cc
           })
         }), () => saveCodes(this))
@@ -429,6 +441,7 @@ class App extends Component {
           open={state.showModal}
           close={evt => this.setState({showModal: false})}
         >
+          <div style={{ overflowY: `auto`}}>
           <h4>Which device to you want to download codes from</h4>
           {
             Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
@@ -443,10 +456,16 @@ class App extends Component {
           }
           <h4>Property Reports</h4>
           {
-            Object.keys(R.groupBy(R.prop(`job`), this.state.allUnitCodes)).map(job => {
+            Object.keys(
+              R.groupBy(
+                R.prop(`job`),
+                R.sort(R.descend(R.prop(`createdAt`)), this.state.allUnitCodes)
+              )
+            ).map(job => {
               return <button key={job} onClick={evt => downloadPerJob(this, job)}>{job}</button>
             })
           }
+          </div>
         </Modal>
         <Modal
           open={state.showOtherModal}
