@@ -116,7 +116,7 @@ const log = console.log // eslint-disable-line no-unused-vars
     .then(r => r.json())
     .then(r => {
       const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', format(new Date(uc.createdAt), 'MM/DD/YYYY h:mm'), uc))
-      comp.setState({allUnitCodes: withCSTTime, showModal: true})
+      comp.setState({allUnitCodes: withCSTTime})
     })
     .catch(console.error)
   }
@@ -307,6 +307,7 @@ class App extends Component {
         `Completed. No Issues.`
       ],
     }
+    getUnitCodesAndDownload(this)
   }
 
   updateOtherDesc = evt => {
@@ -432,41 +433,29 @@ class App extends Component {
         }
         </ul>
         { !!this.state.jobName &&<EndJobButton onClick={evt => endJob(this)}>End Property</EndJobButton>}
-        <button style={{
-          padding: '25px',
-          width: '100%',
-          marginBottom: '50px'
-        }} onClick={evt => getUnitCodesAndDownload(this)}>Download Report</button>
-        <Modal
-          open={state.showModal}
-          close={evt => this.setState({showModal: false})}
-        >
-          <div style={{ overflowY: `auto`}}>
-          <h4>Which device to you want to download codes from</h4>
-          {
-            Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
-              .map((x, i) =>
-                (<div key={i}>
-                  <button onClick={evt => downloadServiceNoIssuesUnitCodes(this, x)}>{`${x} (Completed. No Issues)`}</button>
-                  <button onClick={evt => downloadServiceWithIssuesUnitCodes(this, x)}>{`${x} (Completed with issues)`}</button>
-                  <button onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
-                  <button onClick={evt => downloadAllUnitCodesFromDevice(this, x)}>{`All`}</button>
-                </div>)
-              )
-          }
-          <h4>Property Reports</h4>
-          {
-            Object.keys(
-              R.groupBy(
-                R.prop(`job`),
-                R.sort(R.descend(R.prop(`createdAt`)), this.state.allUnitCodes)
-              )
-            ).map(job => {
-              return <button key={job} onClick={evt => downloadPerJob(this, job)}>{job}</button>
-            })
-          }
-          </div>
-        </Modal>
+        <h4>Reports By User/type</h4>
+        {
+          Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
+            .map((x, i) =>
+              (<div key={i}>
+                <button onClick={evt => downloadServiceNoIssuesUnitCodes(this, x)}>{`${x} (Completed. No Issues)`}</button>
+                <button onClick={evt => downloadServiceWithIssuesUnitCodes(this, x)}>{`${x} (Completed with issues)`}</button>
+                <button onClick={evt => downloadUnservicedUnitCodesFromDevice(this, x)}>{`${x} (NA)`}</button>
+                <button onClick={evt => downloadAllUnitCodesFromDevice(this, x)}>{`All`}</button>
+              </div>)
+            )
+        }
+        <h4>Property Reports</h4>
+        {
+          Object.keys(
+            R.groupBy(
+              R.prop(`job`),
+              R.sort(R.descend(R.prop(`createdAt`)), this.state.allUnitCodes)
+            )
+          ).map(job => {
+            return <button key={job} onClick={evt => downloadPerJob(this, job)}>{job}</button>
+          })
+        }
         <Modal
           open={state.showOtherModal}
           close={evt => this.setState({showOtherModal: false})}
