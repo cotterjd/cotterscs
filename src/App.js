@@ -194,13 +194,13 @@ const log = console.log // eslint-disable-line no-unused-vars
 , redoCode = (comp, unitCodeArray, i) => {
     const id = R.head(unitCodeArray) 
     const unitName = R.head(R.tail(unitCodeArray))
-    const chosenCodes = R.last(unitCodeArray).split(`, `)
+    // const chosenCodes = R.last(unitCodeArray).split(`, `)
     xhr.del(id)
       .then(r => r.json())
       .then(_ => {
         comp.setState({
           unitName, 
-          chosenCodes,
+          // chosenCodes,
         })
       })
       .catch(console.error)
