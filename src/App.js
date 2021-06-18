@@ -6,6 +6,7 @@ import xhr from './xhr'
 import {format} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
+import utils from './utils'
 
 const log = console.log // eslint-disable-line no-unused-vars
 
@@ -447,13 +448,8 @@ class App extends Component {
         }
         <h4>Property Reports</h4>
         {
-          Object.keys(
-            R.groupBy(
-              R.prop(`job`),
-              R.sort(R.descend(R.prop(`createdAt`)), this.state.allUnitCodes)
-            )
-          ).map(job => {
-            return <button key={job} onClick={evt => downloadPerJob(this, job)}>{job}</button>
+          utils.sortedJobNames(this.state.allUnitCodes).map(jobName => {
+            return <button key={jobName} onClick={_ => downloadPerJob(this, jobName)}>{jobName}</button>
           })
         }
         <Modal
