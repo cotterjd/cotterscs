@@ -1,6 +1,7 @@
 import * as R from 'ramda'
 
 export * from './handleCSVDownload'
+export * from './formatDBData'
 export default {
 	sortedJobNames,
 }

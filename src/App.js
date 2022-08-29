@@ -2,10 +2,9 @@ import React, { Component } from 'react';
 import './App.css';
 import * as R from 'ramda'
 import xhr from './xhr'
-import {format} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
-import utils, { handleCSVDownload } from './utils'
+import utils, { handleCSVDownload, formatDBData } from './utils'
 import { CodeButton, SaveButton, SaveJobButton, EndJobButton, AddCodesButton } from './styled'
 
 const log = console.log // eslint-disable-line no-unused-vars
@@ -14,7 +13,7 @@ const log = console.log // eslint-disable-line no-unused-vars
     if (code === `OTHER` || code === `Broken Damper - Other`) {
       comp.setState({showOtherModal: true})
     }
-    comp.setState((oldState, props) => ({
+    comp.setState((oldState, _) => ({
       chosenCodes: oldState.chosenCodes.includes(code) ? oldState.chosenCodes.filter(x => x !== code) : oldState.chosenCodes.concat(code)
     }))
   }
@@ -36,10 +35,10 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 // [String] -> [Array] -> null
 , formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt, x.deviceId, x.job ]).reverse()
-, getUnitCodesAndDownload = (comp) => {
+, setUnitCodes = (comp) => {
     xhr.listUnitCodes()
     .then(r => {
-      const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', format(new Date(uc.createdAt), 'MM/DD/YYYY h:mm'), uc))
+      const withCSTTime = r.data.unitCodes // r.records.map(formatDBData)
       comp.setState({allUnitCodes: withCSTTime})
     })
     .catch(console.error)
@@ -85,8 +84,10 @@ const log = console.log // eslint-disable-line no-unused-vars
     handleCSVDownload(comp.state.columns, data)
     comp.setState({showModal: false})
   }
-, getOldRecords = (comp) => {
-    return xhr.listOldRecords(comp.state.jobName, comp.state.unitName)
+, getOldRecords = async (comp) => {
+    const { jobName, unitName, allUnitCodes } = comp.state
+    return allUnitCodes.filter(x => x.job === jobName && x.unit === unitName)
+    // return xhr.listOldRecords(comp.state.jobName, comp.state.unitName)
   }
 , deleteOldRecord = (recordToDelete) => {
     return xhr.del(recordToDelete.id)
@@ -119,30 +120,10 @@ const log = console.log // eslint-disable-line no-unused-vars
     }
   }
 , saveCodes = (comp) => {
-    return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-      method: 'POST',
-      body: JSON.stringify({
-        query: `
-          mutation {
-            createUnitCode(data: {
-              deviceId: "${comp.state.deviceId}"
-              unit: "${comp.state.unitName}"
-              codes: "${comp.state.chosenCodes.join(', ')}"
-              job: "${comp.state.jobName}"
-            }) {
-              id job unit
-            }
-          }
-        `
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    .then(r => r.json())
+    const { deviceId, unitName, chosenCodes, jobName } = comp.state
+    xhr.saveCodes(deviceId, unitName, chosenCodes, jobName)
     .then(r => {
        if(goodResponse(r)) {
-         console.log(`RESPONSE`, r)
          comp.setState(oldState => addCodesAndReset(r, oldState))
        } else {
          comp.setState((oldState) => ({
@@ -159,7 +140,6 @@ const log = console.log // eslint-disable-line no-unused-vars
 class App extends Component {
   constructor() {
     super()
-    this.foobar = React.createRef()
     this.state = {
       chosenCodes: [],
       unitName: '',
@@ -209,7 +189,7 @@ class App extends Component {
         `Completed. No Issues.`
       ],
     }
-    getUnitCodesAndDownload(this)
+    setUnitCodes(this)
   }
 
   updateOtherDesc = evt => {
@@ -226,11 +206,11 @@ class App extends Component {
     if (unitName && chosenCodes.length) {
       if (chosenCodes.includes('Went Back')) {
         getOldRecords(this)
-        .then(r => {
-          if(!r.errors) {
-            deleteOldRecord(R.head(r.data.unitCodes))
-          } else {
-            console.log(r.errors)
+        .then(codes => {
+          if (codes.length) deleteOldRecord(R.head(codes))
+          else {
+            console.log(`No codes found`)
+            console.log(`codes: `, codes)
           }
         })
         .then(r => saveCodes(this))
