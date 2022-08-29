@@ -1,12 +1,12 @@
 import React, { Component } from 'react';
-import styled from 'styled-components';
 import './App.css';
 import * as R from 'ramda'
 import xhr from './xhr'
 import {format} from 'date-fns'
 import { makeCookieString, getCookie } from './cookie'
 import Modal from './Modal'
-import utils from './utils'
+import utils, { handleCSVDownload } from './utils'
+import { CodeButton, SaveButton, SaveJobButton, EndJobButton, AddCodesButton } from './styled'
 
 const log = console.log // eslint-disable-line no-unused-vars
 
@@ -34,87 +34,10 @@ const log = console.log // eslint-disable-line no-unused-vars
     document.cookie=makeCookieString('job', ``, 365)
     comp.setState({jobName: ``, job: ``})
   }
-, CodeButton = styled.button`
-    background-color: ${props => props.state.chosenCodes.includes(props.code) ? 'green' : 'none'};
-    color: ${props => props.state.chosenCodes.includes(props.code) ? 'white' : (props.code.includes(`Completed`) ? 'green' : 'none')};
-    width: 99%;
-    padding: 15px;
-  `
-, SaveButton = styled.button`
-    background-color: #805716;
-    color: #ffffff;
-    width: 99%;
-    padding: 25px 15px;
-    margin: 5px;
-    border-radius: 10px;
-  `
-, SaveJobButton = styled.button`
-    background-color: green;
-    color: #ffffff;
-    width: 99%;
-    padding: 25px 15px;
-    margin: 5px;
-    border-radius: 10px;
-    text-transform: uppercase;
-  `
-, EndJobButton = styled.button`
-    background-color: red;
-    color: #ffffff;
-    width: 99%;
-    padding: 25px 15px;
-    margin: 5px;
-    border-radius: 10px;
-    text-transform: uppercase;
-  `
-, AddCodesButton = styled.button`
-    width: 100%;
-    padding: 20px;
-    background-color: #74fff8;
-  `
 // [String] -> [Array] -> null
-, handleCSVDownload = (columns, data) => {
-    const CSVHead = `${columns.reduce((soFar, column) => `${soFar}"${column}",`, '').slice(0, -1)}\r\n`
-    let CSVBody = data.reduce((soFar, row) => `${soFar}"${row.join('","')}"\r\n`, [])
-    if (typeof CSVBody === "string") {
-      CSVBody = CSVBody.trim()
-    } else CSVBody = ''
-    /* taken from react-csv */
-    const csv = `${CSVHead}${CSVBody}`
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const dataURI = `data:text/csv;charset=utf-8,${csv}`
-
-    const URL = window.URL || window.webkitURL
-    const downloadURI = typeof URL.createObjectURL === 'undefined' ? dataURI : URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.setAttribute('href', downloadURI)
-    link.setAttribute('download', 'tableDownload.csv')
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-  }
 , formatData = data => R.sortBy(R.props('createdAt'), data).map(x => [ x.unit, x.codes, x.createdAt, x.deviceId, x.job ]).reverse()
 , getUnitCodesAndDownload = (comp) => {
-    return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-      method: 'POST',
-      body: JSON.stringify({
-        query: `
-          query {
-            unitCodes {
-              unit
-              codes
-              createdAt
-              deviceId
-              job
-            }
-          }
-        `
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    .then(r => r.json())
+    xhr.listUnitCodes()
     .then(r => {
       const withCSTTime = r.data.unitCodes.map(uc => R.assoc('createdAt', format(new Date(uc.createdAt), 'MM/DD/YYYY h:mm'), uc))
       comp.setState({allUnitCodes: withCSTTime})
@@ -163,31 +86,9 @@ const log = console.log // eslint-disable-line no-unused-vars
     comp.setState({showModal: false})
   }
 , getOldRecords = (comp) => {
-    return fetch('https://us1.prisma.sh/jordan-cotter-820a2c/cruise/dev', {
-      method: 'POST',
-      body: JSON.stringify({
-        query: `
-          {
-            unitCodes(orderBy: createdAt_DESC where: {
-              job: "${comp.state.jobName}"
-              unit: "${comp.state.unitName}"
-            }) {
-              id
-              createdAt
-              codes
-              job
-            }
-          }
-        `
-      }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    })
-    .then(r => r.json())
-    .catch(console.error)
+    return xhr.listOldRecords(comp.state.jobName, comp.state.unitName)
   }
-, deleteOldRecord = (comp, recordToDelete) => {
+, deleteOldRecord = (recordToDelete) => {
     return xhr.del(recordToDelete.id)
       .then(r => r.json())
       .catch(console.error)
@@ -320,21 +221,21 @@ class App extends Component {
   closeOtherModal = evt => {
     this.setState({ showOtherModal: false })
   }
-  addCodes = evt => {
+  addCodes = _ => {
     const { unitName, chosenCodes, otherDesc } = this.state
-    if (!!unitName && chosenCodes.length) {
+    if (unitName && chosenCodes.length) {
       if (chosenCodes.includes('Went Back')) {
         getOldRecords(this)
         .then(r => {
           if(!r.errors) {
-            deleteOldRecord(this, R.head(r.data.unitCodes))
+            deleteOldRecord(R.head(r.data.unitCodes))
           } else {
             console.log(r.errors)
           }
         })
         .then(r => saveCodes(this))
       } else if (chosenCodes.includes(`OTHER`)) {
-        this.setState(state => ({
+        this.setState(_ => ({
           chosenCodes: chosenCodes.map(cc => {
             if (cc === `OTHER`) return `OTHER ${otherDesc}`
             return cc
