@@ -26,7 +26,7 @@ const log = console.log // eslint-disable-line no-unused-vars
   }
 , saveJobName = (comp) => {
     if (!comp.state.job) alert(`Property name required`)
-    document.cookie=makeCookieString('job', comp.state.jobName, 365)
+    document.cookie=makeCookieString('job', comp.state.job, 365)
     comp.setState({jobName: comp.state.job})
   }
 , endJob = (comp) => {
@@ -38,7 +38,7 @@ const log = console.log // eslint-disable-line no-unused-vars
 , setUnitCodes = (comp) => {
     xhr.listUnitCodes()
     .then(r => {
-      const withCSTTime = r.data.unitCodes // r.records.map(formatDBData)
+      const withCSTTime = r.records.map(formatDBData)
       comp.setState({allUnitCodes: withCSTTime})
     })
     .catch(console.error)
@@ -108,32 +108,38 @@ const log = console.log // eslint-disable-line no-unused-vars
       })
       .catch(console.error)
   }
-, goodResponse = (r) => {
-    return r && r.data && r.data.createUnitCode && !r.errors
-  }
-, addCodesAndReset = (response, oldState) => {
-    const newUnitCode = response.data.createUnitCode
+// , goodResponse = (r) => {
+//     return r && r.data && r.data.createUnitCode && !r.errors
+//   }
+, addCodesAndReset = (records, oldState) => {
+    const x = R.head(records)
+    const newUnitCode = {
+      ...x.fields,
+      id: x.id,
+    }
+    const newCodes = [...oldState.unitCodes, [newUnitCode.id, oldState.unitName, oldState.chosenCodes].join(', ')]
     return {
-      unitCodes: [...oldState.unitCodes, [newUnitCode.id, oldState.unitName, oldState.chosenCodes.join(', ')]],
+      unitCodes: newCodes,
       chosenCodes: [],
       unitName: '',
     }
   }
 , saveCodes = (comp) => {
     const { deviceId, unitName, chosenCodes, jobName } = comp.state
+    if (!deviceId) return alert(`Please add your user.`)
+    if (!jobName) return alert(`Please add a job.`)
     xhr.saveCodes(deviceId, unitName, chosenCodes, jobName)
     .then(r => {
-       if(goodResponse(r)) {
-         comp.setState(oldState => addCodesAndReset(r, oldState))
-       } else {
-         comp.setState((oldState) => ({
-           unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
-           chosenCodes: [],
-           unitName: '',
-         }))
-       }
-       }
-    )
+      if(r.records && r.records.length) {
+        comp.setState(oldState => addCodesAndReset(r.records, oldState))
+      } else {
+        comp.setState((oldState) => ({
+          unitCodes: [...oldState.unitCodes, [oldState.unitName, 'NOT SAVED. make sure you have a internet connection and try again']],
+          chosenCodes: [],
+          unitName: '',
+        }))
+      }
+    })
     .catch(console.error)
   }
 ;
@@ -314,7 +320,7 @@ class App extends Component {
               </li>)
         }
         </ul>
-        { !!this.state.jobName &&<EndJobButton onClick={evt => endJob(this)}>End Property</EndJobButton>}
+        { this.state.jobName && <EndJobButton onClick={evt => endJob(this)}>End Property</EndJobButton> }
         <h4>Reports By User/type</h4>
         {
           Object.keys(R.groupBy(R.prop('deviceId'), this.state.allUnitCodes))
@@ -328,6 +334,7 @@ class App extends Component {
             )
         }
         <h4>Property Reports</h4>
+        {/* TODO: handle pagination for download */}
         {
           utils.sortedJobNames(this.state.allUnitCodes).map(jobName => {
             return <button key={jobName} onClick={_ => downloadPerJob(this, jobName)}>{jobName}</button>

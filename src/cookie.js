@@ -17,7 +17,7 @@ function makeCookieString(name, value, days) {
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
     expires = `; expires=${date.toGMTString()}`
   }
-  return `${name}=${value}${expires};domain=cotterjd.github.io;path=/`
+  return `${name}=${value}${expires};domain=${getDomain(window)};path=/`
 }
 function getCookie(name) {
   const value = `; ${document.cookie}`

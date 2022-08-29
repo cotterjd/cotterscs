@@ -1,14 +1,17 @@
-import { format } from 'date-fns'
+// import { format } from 'date-fns'
 
 export const formatDBData = (record) => {
-  const { fields } = record
-  const { codes, unit, job } = fields
+  const { fields, id } = record
+  const { codes, unit, job, deviceId, createdAt } = fields
 
   return {
+    id,
     codes,
     unit,
     job,
-    deviceId: fields["device ID"],
-    createdAt: format(new Date(fields["creatd date"]), 'MM/DD/YYYY h:mm'),
+    deviceId,
+    createdAt,
+    // deviceId: fields["device ID"],
+    // createdAt: format(new Date(fields["creatd date"]), 'MM/DD/YYYY h:mm'),
   }
 }
